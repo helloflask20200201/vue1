@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="{{url_for('static',filename='/css/bootstrap.css')}}">
+    <link rel="stylesheet" href="{{url_for('static',filename='/css/bootstrap.min.css')}}">
+    <script type="text/javascript" src="{{url_for('static',filename='/js/jquery-3.5.1.min.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static',filename='/js/jquery-3.5.1.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static',filename='/js/bootstrap.min.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static',filename='/js/bootstrap.js')}}"></script>
+</head>
+<body>
+    <h1>hello flask</h1>
+    <div id="d2">
+        <h2 id="d2-h2"></h2>
+    </div>
+    <div id="d1">
+        <table id="table" class="table table-hover">
+            <thead>
+              <tr>
+                  <td>id</td>
+                  <td>job id</td>
+                  <td>job name</td>
+                  <td>job next_run_time</td>
+              </tr>
+            </thead>
+            <tbody id="tBody"></tbody>
+        </table>
+    </div>
+    <p>hello</p>
+<script>
+    var xhr = null;
+    var job = null;
+    $(function() {
+      xhr = createXHR();
+      var url = "/scheduler/jobs"
+      console.log(url)
+      xhr.open("GET",url,false);
+      xhr.send();  //发送请求
+      var info = xhr.responseText;
+      console.log(info);  //显示JSON对象字符串
+      var jobs = JSON.parse(info);  //调用eval()把字符串转换为本地脚本
+      console.log(jobs[0])
+      createTab(jobs)
+    })
+
+    function createXHR () {
+    var XHR = [  //兼容不同浏览器和版本得创建函数数组
+        function () { return new XMLHttpRequest () },
+        function () { return new ActiveXObject ("Msxml2.XMLHTTP") },
+        function () { return new ActiveXObject ("Msxml3.XMLHTTP") },
+        function () { return new ActiveXObject ("Microsoft.XMLHTTP") }
+    ];
+    //尝试调用函数，如果成功则返回XMLHttpRequest对象，否则继续尝试
+    for (var i = 0; i < XHR.length; i ++) {
+        try {
+            xhr = XHR[i]();
+        } catch(e) {
+            continue  //如果发生异常，则继续下一个函数调用
+        }
+        break;  //如果成功，则中止循环
+    }
+    return xhr;  //返回对象实例
+}
+    function createTab(jobs) {
+        table = document.getElementById("table")
+        //console.log(table.hasChildNodes())
+        tBody = document.getElementById("tBody");
+        for(var i=0;i<jobs.length;i++){
+            tr = tBody.insertRow(i);//完全的等于下两行注释里的代码
+            tr.id = "job" + jobs[i].id
+            //tr=document.createElement("tr");
+            //tBody.appendChild(tr);
+            td = tr.insertCell();
+            td.innerHTML=i+1;
+            td = tr.insertCell();
+            td.innerHTML=jobs[i].id;
+            td = tr.insertCell();
+            td.innerHTML=jobs[i].name;
+            td = tr.insertCell();
+            td.innerHTML=jobs[i].next_run_time;
+            td.id = "next" + jobs[i].id
+            bt1 = document.createElement("button");
+            bt1.id="start"+jobs[i].id
+            bt1.className ="btn btn-default"
+            bt1.innerHTML="启动"
+            bt1.onclick=jobresume
+            td = tr.insertCell();
+            bt2 = document.createElement("button");
+            bt2.id="stopd"+jobs[i].id
+            bt2.className ="btn btn-success"
+            bt2.innerHTML="停止"
+            bt2.onclick=jobpause
+            bt3 = document.createElement("button");
+            bt3.id="stopd"+jobs[i].id
+            bt3.className="btn btn-danger"
+            bt3.innerHTML="删除"
+            bt3.onclick=jobdelete
+            td=tr.insertCell();
+            td.appendChild(bt1)
+            td.appendChild(bt2)
+            td.appendChild(bt3)
+        }
+	}
+
+    function jobpause() {
+      xhr = createXHR();
+      var job_id = this.id.substr(5);
+      var url = "/scheduler/jobs/" + job_id + "/pause"
+      //var url = "/jobpause/" + job_id
+      console.log("jobpause" + url)
+      xhr.open("POST", url, true);  //建立间接，要求异步响应
+        xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');  //设置为表单方式提交
+        xhr.onreadystatechange = function () {  //绑定响应状态事件监听函数
+            if (xhr.readyState == 4) {  //监听readyState状态
+                if (xhr.status == 200 || xhr.status == 0) {  //监听HTTP状态码
+                    //alert(job_id + "暂停");  //接收数据
+                    document.getElementById("next" + job_id).innerHTML=null
+                    document.getElementById("d2-h2").innerHTML=job_id+ "已暂停"
+                }
+            }
+        }
+        xhr.send();  //发送请求
+    }
+
+    function jobresume() {
+      xhr = createXHR();
+      var job_id = this.id.substr(5);
+      var url = "/scheduler/jobs/" + job_id + "/resume"
+      //var url = "/jobresume/" + job_id
+      console.log("jobresume" + url)
+      xhr.open("POST", url, true);  //建立间接，要求异步响应
+        xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');  //设置为表单方式提交
+        xhr.onreadystatechange = function () {  //绑定响应状态事件监听函数
+            if (xhr.readyState == 4) {  //监听readyState状态
+                if (xhr.status == 200 || xhr.status == 0) {  //监听HTTP状态码
+                    //alert(job_id + "恢复");  //接收数据
+                    var job = getJob(job_id)
+                    console.log(job)
+                    confirm(job_id + "恢复")
+                    document.getElementById("next" + job_id).innerHTML=job.next_run_time
+                    document.getElementById("d2-h2").innerHTML=job_id+ "已恢复"
+                }
+            }
+        }
+        xhr.send();  //发送请求
+    }
+
+    function jobdelete() {
+      xhr = createXHR();
+      var job_id = this.id.substr(5);
+      var tr = this.parentNode.parentNode
+      console.log(tr)
+      var url = "/scheduler/jobs/" + job_id
+      //var url = "/jobremove/" + job_id
+      console.log("jobdelete" + url)
+      xhr.open("DELETE", url, true);  //建立间接，要求异步响应
+       xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');  //设置为表单方式提交
+       xhr.onreadystatechange = function () {  //绑定响应状态事件监听函数
+         if (xhr.readyState == 4) {  //监听readyState状态
+           if (xhr.status == 204 || xhr.status == 0) {  //监听HTTP状态码
+             //alert(job_id + "删除");  //接收数据
+             document.getElementById("d2-h2").innerHTML=job_id+ "已删除"
+             var tbody = tr.parentNode;
+             //删除行
+             tbody.removeChild(tr);
+           }
+         }
+       }
+        xhr.send();  //发送请求
+    }
+
+    function getJob(job_id) {
+      xhr = createXHR();
+      var url = "/scheduler/jobs/" + job_id
+      //console.log(url)
+      xhr.open("GET", url, false);  //建立间接，要求异步响应
+      xhr.send();  //发送请求
+      var info = xhr.responseText;
+      var job = JSON.parse(info);  //调用eval()把字符串转换为本地脚本
+      return job
+    }
+
+</script>
+</body>
+</html>
